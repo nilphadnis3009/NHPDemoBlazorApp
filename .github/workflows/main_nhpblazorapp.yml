@@ -1,5 +1,5 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
+# Docs for the Azure Web Apps Deploy action: https://github.com
+# More GitHub Actions for Azure: https://github.com
 
 name: Build and deploy ASP.Net Core app to Azure Web App - nhpblazorapp
 
@@ -24,14 +24,12 @@ jobs:
           dotnet-version: '9.x'
 
       - name: Build with dotnet
-        # CHANGE "YOUR_API_FOLDER_NAME" to your actual API subfolder name (e.g., ./Server or ./MyApi)
-        working-directory: ./CustomAuthenticationApp/CustomAuthenticationApp.API.csproj
-        run: dotnet build --configuration Release
+        working-directory: ./CustomAuthenticationApp
+        run: dotnet build CustomAuthenticationApp.API.csproj --configuration Release
 
       - name: dotnet publish
-        # CHANGE "YOUR_API_FOLDER_NAME" to match the folder path used above
-        working-directory: ./CustomAuthenticationApp/CustomAuthenticationApp.API.csproj
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        working-directory: ./CustomAuthenticationApp
+        run: dotnet publish CustomAuthenticationApp.API.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
