@@ -1,0 +1,149 @@
+﻿@using DynamicAuthBlazor.Web.Providers
+@using DynamicAuthBlazor.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using static System.Net.WebRequestMethods
+@using static Entities.DTO.JobDTO
+@inject HttpClient Http
+@inject NotificationStateService NotificationState
+@inject CartService CartService
+
+@inherits LayoutComponentBase
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+       
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+
+            <AuthorizeView>
+                <Authorized>
+                    <!-- ✅ VISIBLE ONLY WHEN LOGGED IN -->
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="text-black small fw-semibold">
+                            Logged in as: <strong class="text-warning">@context.User.Identity?.Name</strong>
+                        </span>
+                        <button class="btn btn-sm px-3" @onclick="ExecuteLogout">
+                            <i class="bi bi-box-arrow-left me-1"></i> Logout
+                        </button>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <!-- 🔓 VISIBLE ONLY WHEN ANONYMOUS / LOGGED OUT -->
+                    <button class="btn btn-primary btn-sm px-3" @onclick="NavigateToLogin">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                    </button>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            <!-- 🚨 GLOBAL OVERLAY TOAST ALERT BANNER CONTAINER -->
+            @if (activeToastAlert != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show shadow-lg position-fixed top-0 end-0 m-4"
+                     style="z-index: 9999; max-width: 400px;" role="alert">
+                    <h5 class="alert-heading">✔ Task Processed Successfully!</h5>
+                    <p class="mb-1">@activeToastAlert.ResultMessage</p>
+                    <small class="text-muted d-block">Tracking ID: @activeToastAlert.JobId</small>
+                    <button type="button" class="btn-close" @onclick="DismissToast" aria-label="Close"></button>
+                </div>
+            }
+
+            @Body
+        </article>
+    </main>
+</div>
+
+@code{
+    [Inject]
+    public IAuthService authService { get; set; } = default!;
+
+    [Inject]
+    public NavigationManager nm { get; set; } = default!;
+
+    private CancellationTokenSource _cts = new();
+    private JobStatusDto? activeToastAlert;
+    private readonly List<string> _activeTrackedJobIds = new();
+
+    private void NavigateToLogin()
+    {
+        // Direct route redirect to your anonymous login screen block
+        nm.NavigateTo("login");
+    }
+
+    private async Task ExecuteLogout()
+    {
+        // 1. Clears token out of localStorage and resets client headers via your service
+        await authService.LogoutAsync();
+
+        // 2. Clear state caches completely and redirect cleanly back to login page
+        nm.NavigateTo("login", forceLoad: true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to the action bridge
+        NotificationState.OnJobTrackRequested += TrackNewBackgroundJob;
+        // Load persistent database data cleanly into your scoped memory instance
+       // await CartService.LoadCartFromDatabaseAsync();
+    }
+
+    private void TrackNewBackgroundJob(string jobId)
+    {
+        lock (_activeTrackedJobIds)
+        {
+            if (!_activeTrackedJobIds.Contains(jobId))
+            {
+                _activeTrackedJobIds.Add(jobId);
+                // Fire background execution checking routines asynchronously
+                _ = PollJobStatusAsync(jobId);
+            }
+        }
+    }
+
+    private async Task PollJobStatusAsync(string jobId)
+    {
+        // Pull updates from the standard secure HTTP controller endpoint every 4 seconds
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(4));
+
+        while (await periodicTimer.WaitForNextTickAsync(_cts.Token))
+        {
+          
+
+            try
+            {
+                var result = await Http.GetFromJsonAsync<JobStatusDto>($"api/jobs/status/{jobId}");
+
+                if (result != null && (result.Status == "Completed" || result.Status == "Failed"))
+                {
+                    activeToastAlert = result;
+
+                    lock (_activeTrackedJobIds) { _activeTrackedJobIds.Remove(jobId); }
+
+                    await InvokeAsync(StateHasChanged);
+                    break; // Terminate this timer thread instance
+                }
+            }
+            catch (Exception)
+            {
+                // Network blips are ignored; polling resumes automatically on next interval tick
+            }
+        }
+    }
+
+    private void DismissToast()
+    {
+        activeToastAlert = null;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // 🔥 CRITICAL: Unsubscribe to release memory blocks cleanly when layout refreshes
+        NotificationState.OnJobTrackRequested -= TrackNewBackgroundJob;
+    }
+}
+}

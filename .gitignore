@@ -1,0 +1,24 @@
+
+BackgroundTaskService/bin/
+
+BackgroundTaskService/obj/
+
+CustomAuthenticationApp/.vs/
+
+CustomAuthenticationApp/bin/
+
+CustomAuthenticationApp/obj/
+
+DynamicAuthBlazor.Web/bin/
+
+DynamicAuthBlazor.Web/obj/
+
+Entities/bin/
+
+Entities/obj/
+# Exclude build outputs
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb

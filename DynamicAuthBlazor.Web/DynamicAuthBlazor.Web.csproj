@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.DataAnnotations.Validation" Version="3.2.0-rc1.20223.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.11" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CustomAuthenticationApp\Entities\Entities.csproj" />
+  </ItemGroup>
+	<Target Name="RemoveAspNetCoreFrameworkReference" AfterTargets="AddTransitiveFrameworkReferences" BeforeTargets="ResolveRuntimePackAssets">
+		<ItemGroup>
+			<FrameworkReference Remove="Microsoft.AspNetCore.App" />
+		</ItemGroup>
+	</Target>
+</Project>

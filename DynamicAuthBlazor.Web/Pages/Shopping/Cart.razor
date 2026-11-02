@@ -1,0 +1,143 @@
+﻿@page "/cart"
+@using DynamicAuthBlazor.Web.Services
+@using Entities.Models
+@using Microsoft.AspNetCore.Authorization
+@inject CartService CartService
+@implements IDisposable
+
+@attribute [Authorize(Roles="Admin,Customer")]
+<div class="container mt-4">
+    <h2 class="mb-4"><span class="bi bi-cart3"></span> Your Shopping Cart</h2>
+    
+    @if (cartList.Count == 0)
+    {
+        <div class="alert alert-info text-center p-5 shadow-sm rounded">
+            <h4 class="mb-3">Your cart is Empty!</h4>
+            <a href="catalog" class="btn btn-primary mt-2 px-4 py-2">Continue Shopping</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- 🛒 ITEMS LIST COLUMN -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="ps-4">Product</th>
+                                        <th scope="col">Price</th>
+                                        <th scope="col" style="width: 140px;">Quantity</th>
+                                        <th scope="col">Total</th>
+                                        <th scope="col" class="text-center pe-4">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in cartList)
+                                    {
+                                        <tr>
+                                            <td class="ps-4 py-3">
+                                                <div class="d-flex align-items-center">
+                                                    <img src="@item.ImageUrl" alt="@item.Name" class="img-thumbnail me-3" style="width: 60px; height: 60px; object-fit: cover;" />
+                                                    <div>
+                                                        <h6 class="mb-0 text-truncate" style="max-width: 200px;">@item.Name</h6>
+                                                        <small class="text-muted visually-hidden">ID: @item.product_uid</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>₹@item.Price.ToString("N2")</td>
+                                            <td>
+                                                <!-- Dynamic Quantity Controls -->
+                                                <div class="input-group input-group-sm">
+                                                    <button class="btn btn-outline-secondary" type="button"
+                                                            disabled="@(item.Quantity <= 1)"
+                                                            @onclick="() => ChangeQuantity(item.product_uid, item.Quantity - 1)">
+                                                        -
+                                                    </button>
+                                                    <input type="text" class="form-control text-center bg-white"
+                                                           value="@item.Quantity" readonly style="max-width: 45px;" />
+                                                    <button class="btn btn-outline-secondary" type="button"
+                                                            disabled="@(item.Quantity >= item.MaxStock)"
+                                                            @onclick="() => ChangeQuantity(item.product_uid, item.Quantity + 1)">
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="fw-semibold">₹@((item.Price * item.Quantity).ToString("N2"))</td>
+                                            <td class="text-center pe-4">
+                                                <!-- Trash Action Button -->
+                                                <button class="btn btn-link text-danger p-0 border-0"
+                                                        @onclick="() => RemoveItem(item.product_uid)"
+                                                        title="Remove item">
+                                                    <i class="bi bi-trash3-fill fs-5"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 💰 ORDER SUMMARY SUMMARY COLUMN -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 bg-light p-3">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4 fw-bold">Order Summary</h4>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Total Items</span>
+                            <span class="fw-semibold">@CartService.GetTotalCount()</span>
+                        </div>
+                        <hr />
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <span class="fs-5 fw-bold">Total Amount</span>
+                            <span class="fs-4 fw-bold text-success">₹@CartService.GetTotalPrice().ToString("N2")</span>
+                        </div>
+
+                        <button class="btn btn-success w-100 py-2 fw-semibold text-uppercase shadow-sm">
+                            Proceed to Checkout <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                        <a href="shop" class="btn btn-outline-secondary w-100 mt-2 py-2 fw-semibold text-uppercase">
+                            Continue Shopping
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    List<CartItem> cartList = new();
+
+    protected override async void OnInitialized()
+    {
+
+        // Listen for changes so the page reflects modifications instantly
+        cartList = await CartService.LoadCartFromDatabaseAsync();
+        StateHasChanged();
+    }
+
+    private async void ChangeQuantity(Guid productId, int currentQty)
+    {
+        // Simple synchronous call
+       await CartService.UpdateQuantityAsync(productId, currentQty);
+    }
+
+    private async void RemoveItem(Guid productId)
+    {
+        // Simple synchronous call
+        await CartService.RemoveFromCartAsync(productId);
+    }
+
+
+    public void Dispose()
+    {
+        // Unsubscribe safely to clear references
+        CartService.OnCartChanged -= StateHasChanged;
+    }
+}

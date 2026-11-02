@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "RunAuthWebAndAPI",
+    "Projects": [
+      {
+        "Path": "CustomAuthenticationApp.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "..\\DynamicAuthBlazor.Web\\DynamicAuthBlazor.Web.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "..\\BackgroundTaskService\\BackgroundTaskService.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

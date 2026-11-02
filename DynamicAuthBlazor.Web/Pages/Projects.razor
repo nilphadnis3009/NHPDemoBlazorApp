@@ -1,0 +1,241 @@
+﻿@page "/projects"
+@using System.Net.Http.Json
+@using Entities.Models
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@attribute [Authorize(Policy = "User.Create")]
+<div class="container mt-4">
+    <h2>Project Management Platform</h2>
+   <Popup IsVisible="isVisible" 
+                   ProjectName="Alpha Project" 
+                   Members="team"
+           OnClose="@((TeamMember? member) => CloseTeamModal(member))" />
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    <!-- UI Notification Area -->
+    @if (lastSelectedMember != null)
+    {
+        <div class="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-sm">
+            🎉 You selected: <strong class="font-semibold">@lastSelectedMember.Name</strong> (@lastSelectedMember.Role)
+        </div>
+    }
+    @if (currentProject == null)
+    {
+        <!-- READ LIST -->
+        <button class="btn btn-primary mb-3" @onclick="CreateNew">➕ Create New Project</button>
+
+        @if (projects == null)
+        {
+            <p><em>Loading project states from API...</em></p>
+        }
+        else
+        {
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Priority</th>
+                        <th>Budget Allocation</th>
+                        <th>Team Size</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var proj in projects)
+                    {
+                        <tr>
+                            <td><strong>@proj.Name</strong></td>
+                            <td><span class="badge bg-secondary">@proj.Priority</span></td>
+                            <td>@proj.Budget.AllocatedAmount.ToString("C") (@proj.Budget.Currency)</td>
+                            <td>@proj.TeamMembers.Count members</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning me-2" @onclick="() => EditProject(proj)">✏️ Edit</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteProject(proj.Id)">🗑️ Delete</button>
+                                <button class="btn btn-sm btn-primary me-2" @onclick="() => ViewMembers(proj)"> View Members</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+    else
+    {
+        
+        <!-- COMPLEX UPSERT FORM -->
+        <div class="card p-4 shadow-sm">
+            <h3>@(currentProject.Id == 0 ? "New Project" : $"Edit Project: {currentProject.Name}")</h3>
+            
+            <EditForm Model="currentProject" OnValidSubmit="HandleValidSubmit">
+                <ObjectGraphDataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label class="form-label">Project Name</label>
+                    <InputText @bind-Value="currentProject.Name" class="form-control" />
+                    <ValidationMessage For="() => currentProject.Name" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Priority</label>
+                    <InputSelect @bind-Value="currentProject.Priority" class="form-control">
+                        @foreach (var p in Enum.GetValues<ProjectPriority>())
+                        {
+                            <option value="@p">@p</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <h5 class="mt-4 text-primary">Financial Configuration</h5>
+                <hr />
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Allocated Funding Amount</label>
+                        <InputNumber @bind-Value="currentProject.Budget.AllocatedAmount" class="form-control" />
+                        <ValidationMessage For="() => currentProject.Budget.AllocatedAmount" class="text-danger" />
+                    </div>
+                </div>
+
+                <h5 class="mt-4 text-primary">Assigned Team Members</h5>
+                <hr />
+                @foreach (var member in currentProject.TeamMembers)
+                {
+                    <div class="row align-items-center mb-2">
+                        <div class="col-md-5">
+                            <InputText @bind-Value="member.Name" placeholder="Full Name" class="form-control" />
+                            <ValidationMessage For="() => member.Name" class="text-danger" />
+                        </div>
+                        <div class="col-md-5">
+                            <InputText @bind-Value="member.Role" placeholder="Role" class="form-control" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger w-100" @onclick="() => RemoveMember(member)">Remove</button>
+                        </div>
+                    </div>
+                }
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2 mb-4" @onclick="AddMember">➕ Add Member</button>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success me-2">💾 Save to Server</button>
+                    <button type="button" class="btn btn-light" @onclick="Cancel">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Project>? projects;
+    private Project? currentProject;
+    private string? errorMessage;
+    private bool isVisible = false;
+    private string projectName = "";
+    private List<TeamMember>? team = null; private TeamMember? lastSelectedMember;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        try
+        {
+            projects = await Http.GetFromJsonAsync<List<Project>>("api/project");
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to fetch projects: {ex.Message}";
+        }
+    }
+
+    private void CreateNew()
+    {
+        currentProject = new Project();
+    }
+
+    private void EditProject(Project project)
+    {
+        // Local deep clone to insulate current edits from back-grid updates
+        currentProject = new Project
+        {
+            Id = project.Id,
+            Name = project.Name,
+            Priority = project.Priority,
+            Budget = new ProjectBudget { AllocatedAmount = project.Budget.AllocatedAmount, Currency = project.Budget.Currency },
+            TeamMembers = project.TeamMembers.Select(t => new TeamMember { Id = t.Id, Name = t.Name, Role = t.Role }).ToList()
+        };
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (currentProject == null) return;
+
+        try
+        {
+            if (currentProject.Id == 0)
+            {
+                // Send network POST for creation
+                await Http.PostAsJsonAsync("api/project", currentProject);
+            }
+            else
+            {
+                // Send network PUT for update
+                await Http.PutAsJsonAsync($"api/project/{currentProject.Id}", currentProject);
+            }
+
+            currentProject = null;
+            await LoadProjects();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error processing submission: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteProject(int id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/project/{id}");
+            await LoadProjects();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting item: {ex.Message}";
+        }
+    }
+
+    private void ViewMembers(Project prj)
+    {
+        try
+        {
+            projectName = prj.Name;
+            team = prj.TeamMembers;
+            isVisible = true;
+        }
+        catch (Exception ex)
+        {
+            
+        }
+    }
+    private void CloseTeamModal(TeamMember? selectedMember)
+    {
+        isVisible = false; // Close the popup
+
+        if (selectedMember != null)
+        {
+            // Do something with the child data here
+            lastSelectedMember = selectedMember;
+        }
+
+        StateHasChanged();
+    }
+    private void AddMember() => currentProject?.TeamMembers.Add(new TeamMember());
+    private void RemoveMember(TeamMember m) => currentProject?.TeamMembers.Remove(m);
+    private void Cancel() => currentProject = null;
+}

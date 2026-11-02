@@ -1,0 +1,299 @@
+﻿@page "/Exam"
+@using System.Timers
+@using Microsoft.AspNetCore.Authorization
+@implements IDisposable
+@attribute [Authorize(Policy = "Permission:Student.Exam")]
+<div class="container mt-4" style="max-width: 800px;">
+    @if (!isExamStarted && !isExamFinished)
+    {
+        <!-- START EXAM INSTRUCTIONS SCREEN -->
+        <div class="card shadow p-4 text-center">
+            <h2 class="mb-3">Professional Certification Exam</h2>
+            <p class="text-muted">Test your knowledge with this quick evaluation assessment.</p>
+            <div class="alert alert-info text-start d-inline-block">
+                <ul>
+                    <li>Total Questions: <strong>@questions.Count</strong></li>
+                    <li>Time Allowed: <strong>@GetFormattedTime(timeRemainingSeconds)</strong></li>
+                    <li>Passing Score: <strong>70%</strong></li>
+                </ul>
+            </div>
+            <div>
+                <button class="btn btn-primary btn-lg px-5" @onclick="StartExam">Start Assessment</button>
+            </div>
+        </div>
+    }
+    else if (isExamStarted && !isExamFinished)
+    {
+        <!-- LIVE EXAM INTERFACE -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4>Question @(currentQuestionIndex + 1) of @questions.Count</h4>
+            <div class="badge bg-@TimerColorClass px-3 py-2 fs-6">
+                ⏱️ Time Left: @GetFormattedTime(timeRemainingSeconds)
+            </div>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div class="progress mb-4" style="height: 8px;">
+            <div class="progress-bar bg-success" role="progressbar" 
+                 style="width: @(GetProgressPercentage())%" 
+                 aria-valuenow="@GetProgressPercentage()" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+
+        <!-- CURRENT QUESTION CARD -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4">@questions[currentQuestionIndex].QuestionText</h5>
+                
+                <div class="list-group">
+                    @foreach (var option in questions[currentQuestionIndex].Options)
+                    {
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" style="cursor: pointer;">
+                            <input class="form-check-input flex-shrink-0" type="radio" 
+                                   name="mcqOptions" 
+                                   value="@option"
+                                   checked="@(userAnswers[currentQuestionIndex] == option)"
+                                   @onchange="() => SelectOption(option)" />
+                            <span>@option</span>
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGATION CONTROLS -->
+        <div class="d-flex justify-content-between align-items-center">
+            <button class="btn btn-outline-secondary px-4" 
+                    @onclick="PreviousQuestion" 
+                    disabled="@(currentQuestionIndex == 0)">
+                Previous
+            </button>
+
+            @if (currentQuestionIndex < questions.Count - 1)
+            {
+                <button class="btn btn-primary px-4" @onclick="NextQuestion">Next</button>
+            }
+            else
+            {
+                <button class="btn btn-danger px-4" @onclick="FinishExam">Submit Exam</button>
+            }
+        </div>
+    }
+    else if (isExamFinished)
+    {
+        <!-- RESULT EVALUATION SCREEN -->
+        <div class="card shadow p-4 text-center animate-fade-in">
+            <h2 class="mb-4">📊 Assessment Result</h2>
+            
+            <div class="mb-4">
+                <div class="display-3 fw-bold @ScoreColorClass">@scorePercentage%</div>
+                <p class="fs-5 text-muted">You scored <strong>@correctAnswersCount</strong> out of <strong>@questions.Count</strong> items.</p>
+            </div>
+
+            @if (scorePercentage >= 70)
+            {
+                <div class="alert alert-success d-inline-block px-5">
+                    🎉 <strong>Congratulations!</strong> You have passed the assessment.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-danger d-inline-block px-5">
+                    ❌ <strong>Failed!</strong> You did not meet the passing score constraint.
+                </div>
+            }
+
+            <!-- INDEPTH HISTORICAL CORRECTION HIGHLIGHTS -->
+            <div class="text-start mt-4">
+                <h4 class="mb-3">Review Answers</h4>
+                @for (int i = 0; i < questions.Count; i++)
+                {
+                    var index = i;
+                    var q = questions[index];
+                    var uAns = userAnswers[index];
+                    bool isCorrect = (uAns == q.CorrectOption);
+
+                    <div class="card mb-3 border-@(isCorrect ? "success" : "danger")">
+                        <div class="card-body">
+                            <h6>@(index + 1). @q.QuestionText</h6>
+                            <p class="mb-1 text-muted">
+                                Your Answer: <span class="fw-bold text-@(isCorrect ? "success" : "danger")">@(string.IsNullOrEmpty(uAns) ? "[Skipped]" : uAns)</span>
+                            </p>
+                            @if (!isCorrect)
+                            {
+                                <p class="mb-0 text-success">
+                                    Correct Answer: <span class="fw-bold">@q.CorrectOption</span>
+                                </p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-primary" @onclick="RestartExam">Try Again</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<McqQuestion> questions = new();
+    private Dictionary<int, string> userAnswers = new(); // Stores index mapped to the picked option
+    private int currentQuestionIndex = 0;
+    
+    private bool isExamStarted = false;
+    private bool isExamFinished = false;
+    
+    private Timer? examTimer;
+    private int timeRemainingSeconds = 120; // 2 minutes total exam limit
+    
+    private int correctAnswersCount = 0;
+    private double scorePercentage = 0;
+
+    protected override void OnInitialized()
+    {
+        LoadMockQuestions();
+        ResetUserAnswers();
+    }
+
+    private void LoadMockQuestions()
+    {
+        questions = new List<McqQuestion>
+        {
+            new McqQuestion { 
+                QuestionText = "Which lifecycle method in Blazor executes asynchronously once the component is ready?", 
+                Options = new() { "OnInitializedAsync", "OnParametersSet", "ShouldRender", "Dispose" }, 
+                CorrectOption = "OnInitializedAsync" 
+            },
+            new McqQuestion { 
+                QuestionText = "What parameter modifier is required to pass parameters down from a layout into child views?", 
+                Options = new() { "[Parameter]", "[CascadingParameter]", "[Inject]", "[SupplyParameterFromQuery]" }, 
+                CorrectOption = "[CascadingParameter]" 
+            },
+            new McqQuestion { 
+                QuestionText = "Which mechanism explicitly requests Blazor to trigger a user interface update rerender?", 
+                Options = new() { "InvokeAsync()", "RefreshUI()", "StateHasChanged()", "UpdateDOM()" }, 
+                CorrectOption = "StateHasChanged()" 
+            }
+        };
+    }
+
+    private void ResetUserAnswers()
+    {
+        userAnswers.Clear();
+        for (int i = 0; i < questions.Count; i++)
+        {
+            userAnswers.Add(i, string.Empty);
+        }
+    }
+
+    private void StartExam()
+    {
+        isExamStarted = true;
+        isExamFinished = false;
+        currentQuestionIndex = 0;
+        timeRemainingSeconds = 120;
+        ResetUserAnswers();
+
+        // Instantiate Countdown Background Worker
+        examTimer = new Timer(1000);
+        examTimer.Elapsed += HandleTimerTick;
+        examTimer.AutoReset = true;
+        examTimer.Start();
+    }
+
+    private async void HandleTimerTick(object? sender, ElapsedEventArgs e)
+    {
+        if (timeRemainingSeconds > 0)
+        {
+            timeRemainingSeconds--;
+            // Safely push layout execution context updates back onto UI Main Render Thread
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            await InvokeAsync(FinishExam);
+        }
+    }
+
+    private void SelectOption(string option)
+    {
+        userAnswers[currentQuestionIndex] = option;
+    }
+
+    private void NextQuestion()
+    {
+        if (currentQuestionIndex < questions.Count - 1) currentQuestionIndex++;
+    }
+
+    private void PreviousQuestion()
+    {
+        if (currentQuestionIndex > 0) currentQuestionIndex--;
+    }
+
+    private void FinishExam()
+    {
+        if (examTimer != null)
+        {
+            examTimer.Stop();
+            examTimer.Dispose();
+        }
+
+        // Calculate Performance Matrix Results
+        correctAnswersCount = 0;
+        for (int i = 0; i < questions.Count; i++)
+        {
+            if (userAnswers[i] == questions[i].CorrectOption)
+            {
+                correctAnswersCount++;
+            }
+        }
+
+        scorePercentage = Math.Round(((double)correctAnswersCount / questions.Count) * 100, 1);
+        isExamStarted = false;
+        isExamFinished = true;
+        StateHasChanged();
+    }
+
+    private void RestartExam()
+    {
+        isExamFinished = false;
+        isExamStarted = false;
+    }
+
+    private double GetProgressPercentage()
+    {
+        return ((double)(currentQuestionIndex + 1) / questions.Count) * 100;
+    }
+
+    private string GetFormattedTime(int totalSeconds)
+    {
+        var timeSpan = TimeSpan.FromSeconds(totalSeconds);
+        return timeSpan.ToString(@"mm\:ss");
+    }
+    private string TimerColorClass => timeRemainingSeconds switch
+    {
+        <= 20 => "danger",
+        <= 60 => "warning",
+        _ => "dark"
+    };
+    private string ScoreColorClass => scorePercentage switch
+    {
+        >= 70 => "text-success",
+        _ => "text-danger"
+    };
+    public void Dispose()
+    {
+        if (examTimer != null)
+        {
+            examTimer.Elapsed -= HandleTimerTick;
+            examTimer.Dispose();
+        }
+    }
+    public class McqQuestion
+    {
+        public string QuestionText { get; set; } = string.Empty;
+        public List<string> Options { get; set; } = new();
+        public string CorrectOption { get; set; } = string.Empty;
+    }
+}

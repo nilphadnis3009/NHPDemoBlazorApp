@@ -1,0 +1,235 @@
+﻿@page "/"
+@page "/home"
+@using DynamicAuthBlazor.Web.Providers
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@inject NotificationStateService NotificationState
+@using Microsoft.AspNetCore.Components.Authorization
+@using static Entities.DTO.JobDTO
+
+<PageTitle>Home</PageTitle>
+
+<AuthorizeView>
+     <Authorized>
+        @if (context.User.HasClaim("permission", "User.RunHeavyJob"))
+        {
+            <h1>Hello, world!</h1>
+
+            <button class="btn btn-primary" @onclick="SubmitCalculationTask">Submit heavy calculation</button>
+            @if (isWaitingForApi)
+            {
+                <div class="d-flex align-items-center gap-2 my-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Submitting job to server...</span>
+                </div>
+            }
+            @if (isProcessing)
+            {
+                <div class="container mt-5 text-center">
+                    <div class="card p-5 shadow border-success mx-auto" style="max-width: 500px;">
+                        <h3 class="text-bg-info mb-3">Task Accepted</h3>
+                        <p class="text-muted">
+                            Your task has been accepted and soon will be processed,
+                            You will be able to see the notifacation at top right corner once task processing is completed.
+
+                        </p>
+                        <p> Task ID : <strong>@taskID</strong></p>
+                        <a href="/" class="btn btn-outline-primary mt-3">Return to Safe Dashboard</a>
+                    </div>
+                </div>
+            }
+        }
+    
+        @if (context.User.HasClaim("permission","Student.Exam"))
+        {
+            <div class="portal-container p-4 animate-fade-in" style="font-family: 'Segoe UI', system-ui, sans-serif; max-width: 1100px; margin: 0 auto;">
+
+                <!-- TOP NOTIFICATION BANNER (Dynamic Alert) -->
+                <div class="alert alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-3 mb-4"
+                     style="background: rgba(255, 193, 7, 0.15); border-left: 5px solid #ffc107!important; border-radius: 12px;">
+                    <span class="fs-4">⏳</span>
+                    <div class="text-dark">
+                        <strong>System Notice:</strong> Your active certification window closes in exactly <strong>2 hours</strong>. Please complete all pending items.
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <!-- MAIN HERO BANNER BLOCK -->
+                <div class="card border-0 shadow-lg text-white mb-5 overflow-hidden position-relative"
+                     style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #3730a3 100%); border-radius: 24px;">
+
+                    <!-- Decorative Ambient Vector Blobs -->
+                    <div class="position-absolute" style="width: 250px; height: 250px; background: rgba(255,255,255,0.08); border-radius: 50%; top: -60px; right: -40px; filter: blur(20px);"></div>
+                    <div class="position-absolute" style="width: 180px; height: 180px; background: rgba(255,255,255,0.05); border-radius: 50%; bottom: -40px; left: 30%; filter: blur(15px);"></div>
+
+                    <div class="card-body p-4 p-md-5 z-index-10">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <span class="badge px-3 py-2 mb-3 text-uppercase tracking-wider shadow-sm fw-semibold"
+                                      style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); border-radius: 30px; font-size: 0.75rem;">
+                                    🎓 Academic Examination Domain
+                                </span>
+                                <h1 class="display-6 fw-extrabold tracking-tight mb-2">Welcome Back to the Portal</h1>
+                                <p class="fs-6 text-white-50 mb-4 lh-lg" style="max-width: 600px;">
+                                    Your evaluation matrix is initialized. Ensure your connection state remains stable before initiating the exam terminal container sequence downstream.
+                                </p>
+
+                                <!-- ADVANCED STATS CONTAINER GRID (GRID SYSTEM FIXES THE 'ONLY TWO THINGS SEEN' ISSUE) -->
+                                <div class="row g-3 text-start">
+                                    <div class="col-6 col-sm-3">
+                                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 shadow-sm">
+                                            <small class="d-block text-white-50 fs-7 mb-1">Assigned Exam</small>
+                                            <span class="fs-5 fw-bold">1 Available</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 shadow-sm">
+                                            <small class="d-block text-white-50 fs-7 mb-1">Time Frame</small>
+                                            <span class="fs-5 fw-bold">120 Sec</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 shadow-sm">
+                                            <small class="d-block text-white-50 fs-7 mb-1">Passing Mark</small>
+                                            <span class="fs-5 fw-bold">70% Minimum</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 shadow-sm">
+                                            <small class="d-block text-white-50 fs-7 mb-1">Attempts Left</small>
+                                            <span class="fs-5 fw-bold text-warning">1 / 1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT LAUNCH PANEL -->
+                            <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+                                <NavLink class="btn btn-light btn-lg px-4 py-3 fw-bold text-indigo shadow hover-pulse w-100 w-lg-auto"
+                                         href="exam"
+                                         style="border-radius: 16px; color: #4f46e5; border: none; font-size: 1rem;">
+                                    ⚡ Start Terminal Session
+                                </NavLink>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOWER CONSOLE SECTION (ADDITIONAL CONTEXT STYLES) -->
+                <div class="row g-4">
+                    <!-- System Checklist panel -->
+                    <div class="col-md-7">
+                        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; background: #ffffff;">
+                            <h5 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+                                🛡️ Pre-Exam Integrity Verification
+                            </h5>
+                            <div class="list-group list-group-flush gap-2">
+                                <div class="list-group-item border-0 d-flex align-items-center gap-3 bg-light rounded-3 p-3">
+                                    <span class="text-success fs-5">✓</span>
+                                    <div class="small">Identity token authorization validated dynamically.</div>
+                                </div>
+                                <div class="list-group-item border-0 d-flex align-items-center gap-3 bg-light rounded-3 p-3">
+                                    <span class="text-success fs-5">✓</span>
+                                    <div class="small">Interactive Hub Render Engine component online.</div>
+                                </div>
+                                <div class="list-group-item border-0 d-flex align-items-center gap-3 bg-light rounded-3 p-3">
+                                    <span class="text-warning fs-5">⚠</span>
+                                    <div class="small text-muted">Do not refresh your tab window once initialized.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Support Info panel -->
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm p-4 h-100 text-white"
+                             style="border-radius: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                            <h5 class="fw-bold mb-2">💡 Operational Guide</h5>
+                            <p class="small text-white-50 mb-4">
+                                If you experience latency issues mid-exam, the internal tracking system saves your selections in real-time.
+                            </p>
+                            <div class="border-top border-secondary pt-3 mt-auto">
+                                <small class="d-block text-white-50">Assigned Proctor Desk</small>
+                                <span class="fw-semibold text-warning">System Administrator Console</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+
+</AuthorizeView>
+@code{
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    // Local properties to store context info
+    private string CurrentUsername { get; set; } = "Guest";
+    private string CurrentUserId { get; set; } = string.Empty;
+    private List<string> UserPermissions { get; set; } = new();
+    private bool isProcessing = false;
+    private string taskID="";
+    private bool isWaitingForApi =false;
+    private string status;
+    protected override async Task OnParametersSetAsync()
+    {
+        var authState = await AuthStateTask;
+        var user = authState.User;
+        string? name = authState.User.Claims.Where(s => s.Type == "unique_name").Select(x => x.Value).FirstOrDefault();
+        string? role = authState.User.Claims.Where(s => s.Type == "role").Select(x => x.Value).FirstOrDefault();
+        // Print ALL active claim keys to your browser console (F12) to see where your username is hiding!
+        foreach (var claim in user.Claims)
+        {
+            Console.WriteLine($"Claim Type Key: {claim.Type} | Value: {claim.Value}");
+        }
+    }
+
+    private async Task SubmitCalculationTask()
+    {
+        await InvokeAsync(() =>
+        {
+            isWaitingForApi = true;
+            isProcessing = false; // Hide previous success alerts if re-clicking
+            StateHasChanged();
+        });
+        var payload = new JobRequestDto("FinancialAudit", "Parameters=2026_Q4");
+        var response = await Http.PostAsJsonAsync("api/jobs/submit", payload);
+       
+        if (response.IsSuccessStatusCode)
+        {
+
+            var jobDetails = await response.Content.ReadFromJsonAsync<JobStatusDto>();
+            if (jobDetails != null)
+            {
+
+                // 2. Stop spinner, show the details div, and force render
+                await InvokeAsync(() =>
+                {
+                    isWaitingForApi = false; // Turn off spinner
+                    taskID = jobDetails.JobId;
+                    status = jobDetails.Status;
+                    isProcessing = true;     // Show success div
+                    StateHasChanged();
+                });
+                // 🚀 Sends the JobId downstream to MainLayout.razor via the C# Action handler event
+                NotificationState.RequestJobTracking(jobDetails.JobId);
+                StateHasChanged();
+
+
+                await Task.Delay(7000);
+
+                await InvokeAsync(() =>
+                   {
+                       isWaitingForApi = false;
+                       isProcessing = false;
+                       taskID = "";
+                       status = "";
+                       StateHasChanged();
+                   });
+            }
+        }
+    }
+}

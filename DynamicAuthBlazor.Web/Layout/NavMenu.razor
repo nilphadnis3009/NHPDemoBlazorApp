@@ -1,0 +1,89 @@
+﻿@using DynamicAuthBlazor.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">DynamicAuthBlazor.Web</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="nav flex-column">
+        <CascadingAuthenticationState>
+        <AuthorizeView>
+             <Authorized>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+        </Authorized>
+        </AuthorizeView>
+        <AuthorizeView>
+            <Authorized>
+                    @if (@context.User.HasClaim("permission", "User.Create"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="projects" Match="NavLinkMatch.All">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Projects
+                            </NavLink>
+                        </div>
+                    }
+                    @if (@context.User.HasClaim("permission", "Student.Exam"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="Exam" Match="NavLinkMatch.All">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Exam
+                            </NavLink>
+                        </div>
+                    }
+                    @if (context.User.IsInRole("Admin") || context.User.IsInRole("Customer"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="catalog" Match="NavLinkMatch.All">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Shopping
+                            </NavLink>
+                        </div>
+
+                    }
+                    @if (context.User.IsInRole("Admin"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="ProductStock" Match="NavLinkMatch.All">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Manage Stock
+                            </NavLink>
+                        </div>
+
+                    }
+                </Authorized>
+            
+        </AuthorizeView>
+        </CascadingAuthenticationState>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+   
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+}

@@ -1,0 +1,68 @@
+﻿@using Entities
+@using Entities.Models
+
+@if (IsVisible)
+{
+    <!-- Modal Backdrop -->
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow-lg">
+
+                <!-- Header -->
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">👥 Team Roster: @ProjectName</h5>
+                    <!-- 💡 FIXED: Wrap in a lambda to pass null explicitly -->
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close" @onclick="() => Close(null)"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                    @if (Members == null || !Members.Any())
+                    {
+                        <div class="text-center py-3 text-muted">
+                            <p class="mb-0">No team members assigned to this project yet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var member in Members)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <div>
+                                        <h6 class="mb-0 text-dark font-weight-bold">@member.Name</h6>
+                                        <small class="text-muted">@member.Role</small>
+                                    </div>
+                                    <!-- 💡 OPTIONAL: If you want clicking a member to return them, change this button -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => Close(member)">
+                                        Select
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer bg-light">
+                    <!-- 💡 FIXED: Wrap in a lambda to pass null explicitly -->
+                    <button type="button" class="btn border px-4" @onclick="() => Close(null)">Close</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string ProjectName { get; set; } = string.Empty;
+    [Parameter] public List<TeamMember> Members { get; set; } = new();
+    [Parameter] public EventCallback<TeamMember?> OnClose { get; set; }
+
+    private async Task Close(TeamMember? selectedMember)
+    {
+        // Invoke the callback passing the selected item (or null if canceled)
+        await OnClose.InvokeAsync(selectedMember);
+    }
+}

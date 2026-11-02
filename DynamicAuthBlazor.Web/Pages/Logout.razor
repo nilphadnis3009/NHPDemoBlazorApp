@@ -1,0 +1,21 @@
+﻿@page "/logout"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@using DynamicAuthBlazor.Web.Services
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="container text-center mt-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Signing you out securely, please wait...</p>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Wipe token from localStorage and clear HttpClient headers via our service
+        await AuthService.LogoutAsync();
+
+        // 2. Clear state caches and force navigate back to the entry login screen
+        NavigationManager.NavigateTo("login", forceLoad: true);
+    }
+}
