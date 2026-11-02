@@ -1,7 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy ASP.Net Core app to Azure Web App - BLAZORUIAPPLICATION
+name: Build and deploy Blazor WASM to Azure Static Web App
 
 on:
   push:
@@ -10,46 +7,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_and_deploy_job:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
-
+    name: Build and Deploy Job
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Build and Publish Client
+        # Directs the terminal inside your UI project directory to build static web assets
+        working-directory: ./CustomAuthenticationApp
+        run: dotnet publish CustomAuthenticationApp.Client.csproj -c Release -o output
 
-      - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
+      - name: Deploy to Azure Static Web App
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
-      
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'BLAZORUIAPPLICATION'
-          slot-name: 'Production'
-          package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_92AAB72EFCAC4245B9AA304ADCE443E5 }}
+          # Make sure you create this secret token in your GitHub repo settings if it's missing!
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "upload"
+          
+          # Sets the directory context where the build was run
+          app_location: "/CustomAuthenticationApp" 
+          api_location: ""
+          
+          # Points explicitly to the folder containing the published HTML/WASM distribution assets
+          output_location: "output/wwwroot" 
