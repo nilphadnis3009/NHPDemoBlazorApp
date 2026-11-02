@@ -28,8 +28,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blazor-ui-app
-          path: ./DynamicAuthBlazor.Web/publish-output/wwwroot
-
+          # FIXED: Appending /** ensures only the inner files are bundled, not the parent folder structure
+          path: ./DynamicAuthBlazor.Web/publish-output/wwwroot/**
   deploy:
     runs-on: ubuntu-latest
     needs: build
