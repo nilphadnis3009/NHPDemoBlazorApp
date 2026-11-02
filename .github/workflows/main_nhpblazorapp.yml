@@ -24,9 +24,13 @@ jobs:
           dotnet-version: '9.x'
 
       - name: Build with dotnet
+        # CHANGE "YOUR_API_FOLDER_NAME" to your actual API subfolder name (e.g., ./Server or ./MyApi)
+        working-directory: ./YOUR_API_FOLDER_NAME
         run: dotnet build --configuration Release
 
       - name: dotnet publish
+        # CHANGE "YOUR_API_FOLDER_NAME" to match the folder path used above
+        working-directory: ./YOUR_API_FOLDER_NAME
         run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
