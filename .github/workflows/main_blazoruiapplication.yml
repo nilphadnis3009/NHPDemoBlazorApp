@@ -1,4 +1,7 @@
-name: Build and deploy Blazor WASM to Azure Static Web App
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy ASP.Net Core app to Azure Web App - BLAZORUIAPPLICATION
 
 on:
   push:
@@ -7,32 +10,46 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_and_deploy_job:
+  build:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    permissions:
+      contents: read #This is required for actions/checkout
+
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
 
-      - name: Build and Publish Client
-        working-directory: ./DynamicAuthBlazor.Web
-        run: dotnet publish DynamicAuthBlazor.Web.csproj -c Release -o output
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
 
-      - name: Deploy to Azure Static Web App
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
-        # FORCES THE SECRET TO BE RECOGNIZED IN ENV SCOPE
-        env:
-          INPUT_AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+      - name: dotnet publish
+        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: "upload"
-          app_location: "/DynamicAuthBlazor.Web" 
-          api_location: ""
-          output_location: "output/wwwroot" 
+          name: .net-app
+          path: ${{env.DOTNET_ROOT}}/myapp
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+      
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'BLAZORUIAPPLICATION'
+          slot-name: 'Production'
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B54D399BE1BE4FC3B4FAF163324FF3AD }}
