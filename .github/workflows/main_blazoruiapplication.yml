@@ -23,7 +23,7 @@ jobs:
       - name: Build and Publish Client
         # Directs the terminal inside your UI project directory to build static web assets
         working-directory: ./CustomAuthenticationApp
-        run: dotnet publish CustomAuthenticationApp.Client.csproj -c Release -o output
+        run: dotnet publish CustomAuthenticationApp.Web.csproj -c Release -o output
 
       - name: Deploy to Azure Static Web App
         id: builddeploy
