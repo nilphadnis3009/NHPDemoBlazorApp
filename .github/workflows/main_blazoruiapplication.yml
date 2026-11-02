@@ -22,8 +22,8 @@ jobs:
 
       - name: Build and Publish Client
         # Directs the terminal inside your UI project directory to build static web assets
-        working-directory: ./CustomAuthenticationApp
-        run: dotnet publish CustomAuthenticationApp.Web.csproj -c Release -o output
+        working-directory: ./DynamicAuthBlazor.Web
+        run: dotnet publish DynamicAuthBlazor.Web.csproj -c Release -o output
 
       - name: Deploy to Azure Static Web App
         id: builddeploy
@@ -34,7 +34,7 @@ jobs:
           action: "upload"
           
           # Sets the directory context where the build was run
-          app_location: "/CustomAuthenticationApp" 
+          app_location: "/DynamicAuthBlazor.Web" 
           api_location: ""
           
           # Points explicitly to the folder containing the published HTML/WASM distribution assets
