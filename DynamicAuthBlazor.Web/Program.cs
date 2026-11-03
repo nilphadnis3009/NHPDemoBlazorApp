@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -31,8 +32,8 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("Customer.All", policy => policy.RequireClaim("permission", "Customer.All"));
 });
 builder.Services.AddScoped(sp => new HttpClient
-{
-    BaseAddress = new Uri("https://localhost:7120") // ⬅️ Replace this with your exact Backend API localhost URL
+{//"https://localhost:7120", 
+    BaseAddress = new Uri("http://blazorapp-api-service-avf2adfhhfcwfxhp.westus3-01.azurewebsites.net/") // ⬅️ Replace this with your exact Backend API localhost URL
 });
 
 // Blazor Authentication State Pipeline Integration
