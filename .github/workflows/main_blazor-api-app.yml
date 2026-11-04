@@ -25,11 +25,11 @@ jobs:
 
       # UPDATE 1: Add the explicit path to your Web API project file here
       - name: Build with dotnet
-        run: dotnet build ./CustomAuthenticationApp/CustomAuthenticationApp.csproj --configuration Release
+        run: dotnet build ./CustomAuthenticationApp/CustomAuthenticationApp.API.csproj --configuration Release
 
       # UPDATE 2: Add the explicit path to your Web API project file here as well
       - name: dotnet publish
-        run: dotnet publish ./CustomAuthenticationApp/CustomAuthenticationApp.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish ./CustomAuthenticationApp/CustomAuthenticationApp.API.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
