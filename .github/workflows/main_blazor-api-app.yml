@@ -23,11 +23,13 @@ jobs:
         with:
           dotnet-version: '9.x'
 
+      # UPDATE 1: Add the explicit path to your Web API project file here
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build ./CustomAuthenticationApp/CustomAuthenticationApp.csproj --configuration Release
 
+      # UPDATE 2: Add the explicit path to your Web API project file here as well
       - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish ./CustomAuthenticationApp/CustomAuthenticationApp.csproj.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -44,12 +46,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+          path: ./myapp-extracted # Safely extract the compiled code into a designated directory
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'Blazor-API-App'
           slot-name: 'Production'
-          package: .
+          package: ./myapp-extracted # UPDATE 3: Deploy the actual compiled artifact rather than the root directory
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D5A6062E39A1439C84F5F36A7A08AD7A }}
