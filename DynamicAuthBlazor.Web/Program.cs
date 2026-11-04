@@ -33,7 +33,7 @@ builder.Services.AddAuthorizationCore(options =>
 });
 builder.Services.AddScoped(sp => new HttpClient
 {//"https://localhost:7120", 
-    BaseAddress = new Uri("https://blazor-api-app-deaqc5dvbvama6g9.westus3-01.azurewebsites.net/") // ⬅️ Replace this with your exact Backend API localhost URL
+    BaseAddress = new Uri("https://blazor-api-app-deaqc5dvbvama6g9.westus3-01.azurewebsites.net") // ⬅️ Replace this with your exact Backend API localhost URL
 });
 
 // Blazor Authentication State Pipeline Integration

@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddHealthChecks();
 // 1. Define a name for your CORS policy
 var blazorCorsPolicy = "_blazorCorsPolicy";
 
