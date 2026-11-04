@@ -95,6 +95,10 @@ builder.Services.AddAuthentication(options =>
 });
 
 var app = builder.Build();
+
+// 2. Map the health check endpoint route
+app.MapHealthChecks("/health");
+
 app.UseHttpsRedirection();
 app.UseCors(blazorCorsPolicy);
 app.UseRouting();
