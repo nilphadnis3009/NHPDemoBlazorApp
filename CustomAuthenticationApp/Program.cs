@@ -24,7 +24,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: blazorCorsPolicy,
         policy =>
         {
-            policy.WithOrigins("https://localhost:7224", "http://localhost:5125", "https://black-dune-03ae88710.4.azurestaticapps.net/") // ⬅️ Replace with your exact Blazor App URLs
+            policy.WithOrigins("https://localhost:7224", "http://localhost:5125", "https://icy-hill-0a58e4c10.4.azurestaticapps.net") // ⬅️ Replace with your exact Blazor App URLs
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials(); // Required if you pass cookies or HttpContext identities
