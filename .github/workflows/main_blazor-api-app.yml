@@ -31,6 +31,15 @@ jobs:
       - name: dotnet publish
         run: dotnet publish ./CustomAuthenticationApp/CustomAuthenticationApp.API.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
+       # ADD THIS STEP: Compiles your background worker directly inside the API's deployment layout
+      - name: Publish Background Worker to WebJob Path
+        working-directory: ./CustomAuthenticationApp
+        run: |
+          dotnet publish ../BackgroundTaskService/BackgroundTaskService.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp/App_Data/jobs/continuous/nhpworker
+          
+          # Create the required Linux launch script inside the target WebJob bundle folder
+          echo "dotnet BackgroundTaskService.dll" > ${{env.DOTNET_ROOT}}/myapp/App_Data/jobs/continuous/nhpworker/run.sh
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
